@@ -1,0 +1,82 @@
+---
+- name: Creating Agate User
+  user:
+    name: agate
+    system: true
+  register: created_user
+
+- name: Create Agate SystemD unit
+  template:
+    src: files/agate.service.j2
+    dest: /lib/systemd/system/agate.service
+
+- name: Create Gemini documents folder
+  file:
+    path: "/srv/gemini"
+    state: directory
+    owner: "agate"
+    group: "agate"
+    mode: "u=rwX,g=rwX,o=rwX"
+
+- name: Copy a test page for Agate
+  ansible.builtin.copy:
+    src: files/index.gmi
+    dest: /srv/gemini/index.gmi
+
+- name: Create Agate application folder
+  file:
+    path: "/usr/share/agate"
+    state: directory
+    owner: "root"
+    group: "agate"
+    mode: "u=rwX,g=rwX"
+
+- name: Download x86 linux binary
+  ansible.builtin.get_url:
+    url: "{{ agate_binary_repo_url }}/releases/download/{{ agate_version_tag }}//agate.x86_64-unknown-linux-gnu.gz"
+    dest: /tmp/agate.gz
+  when: ansible_architecture == "x86_64"
+
+- name: Download aarch linux binary
+  ansible.builtin.get_url:
+    url: "{{ agate_binary_repo_url }}/releases/download/{{ agate_version_tag }}//agate.aarch64-unknown-linux-gnu.gz"
+    dest: /tmp/agate.gz
+  when: ansible_architecture == "aarch64"
+
+- name: Download arm linux binary
+  ansible.builtin.get_url:
+    url: "{{ agate_binary_repo_url }/releases/download//{{ agate_version_tag }}//agate.arm-unknown-linux-gnueabihf.gz"
+    dest: /tmp/agate.gz
+  when: ansible_architecture == "arm"
+
+- name: Download armv7 linux binary
+  ansible.builtin.get_url:
+    url: "{{ agate_binary_repo_url }}/releases/download/{{ agate_version_tag }}/agate.armv7-unknown-linux-gnueabihf.gz"
+    dest: /tmp/agate.gz
+  when: ansible_architecture == "armv7"
+
+- name: Extract zipped archive
+  ansible.builtin.shell: gzip -f -d /tmp/agate.gz 
+
+- name: Install Agate server
+  ansible.builtin.copy:
+    src: /tmp/agate
+    dest: /usr/share/agate/agate
+    remote_src: true
+    mode: u=rwx,g=rx,o=x
+
+- name: Applying Gemini content
+  ansible.builtin.git:
+    repo: "{{ gemini_content_url }}"
+    dest: /srv/gemini/capsule
+    update: true
+    force: true
+  when: gemini_content_url | length > 0
+  become: false
+
+- name: Starting Agate server
+  systemd:
+    state: restarted
+    name: agate
+    enabled: true
+    daemon_reload: yes

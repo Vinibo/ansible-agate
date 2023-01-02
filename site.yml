@@ -1,0 +1,10 @@
+---
+- hosts: all
+
+  roles:
+  - role: common
+  - role: agate
+    
+  post_tasks:
+    - debug:
+        msg: "🚀 Gemini pod available on gemini://{{ agate_root_domain }}:{{ agate_port }}"

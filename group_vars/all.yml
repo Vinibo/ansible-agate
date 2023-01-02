@@ -1,0 +1,12 @@
+---
+timezone: Canada/Eastern
+
+agate_binary_repo_url: https://github.com/mbrubeck/agate
+agate_version_tag: v3.2.4+build
+agate_port: 1965
+
+agate_gemini_root: /srv/gemini
+#agate_gemini_root: /srv/gemini/capsule
+
+gemini_content_url: ""
+agate_root_domain: "{{hostname}}.lan"
